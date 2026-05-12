@@ -40,9 +40,8 @@ def clone_github_repo(repo_url: str, destination: str = None) -> str:
     
     destination = Path(destination)
     
-    # Validate destination exists
-    if not destination.exists():
-        raise FileNotFoundError(f"Destination directory does not exist: {destination}")
+    # Create destination if it doesn't exist
+    destination.mkdir(parents=True, exist_ok=True)
     
     # Extract repo name from URL
     repo_name = repo_url.split("/")[-1].replace(".git", "")
