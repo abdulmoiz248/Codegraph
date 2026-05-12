@@ -46,6 +46,13 @@ def clone_github_repo(repo_url: str, destination: str = None) -> str:
     # Extract repo name from URL
     repo_name = repo_url.split("/")[-1].replace(".git", "")
     clone_path = destination / repo_name
+
+    # Reuse an existing clone when present
+    if clone_path.exists():
+        if (clone_path / ".git").exists():
+            logger.info(f"Using existing clone at {clone_path}")
+            return str(clone_path)
+        raise FileExistsError(f"Destination already exists and is not a git repo: {clone_path}")
     
     try:
         logger.info(f"Cloning repo: {repo_url} into {clone_path}")
@@ -58,7 +65,7 @@ def clone_github_repo(repo_url: str, destination: str = None) -> str:
         )
         
         if result.returncode != 0:
-            error_msg = result.stderr or result.stdout
+            error_msg = result.stderr or result.stdout or "git clone failed"
             raise subprocess.CalledProcessError(result.returncode, result.args, error_msg)
         
         logger.info(f"Successfully cloned repo to {clone_path}")
@@ -69,8 +76,8 @@ def clone_github_repo(repo_url: str, destination: str = None) -> str:
         raise TimeoutError(f"Repository clone timed out: {repo_url}")
     
     except subprocess.CalledProcessError as e:
-        logger.error(f"Git clone failed: {e.stderr}")
-        raise RuntimeError(f"Failed to clone repository: {e.stderr}")
+        logger.error(f"Git clone failed: {e.stderr or e.output or 'unknown error'}")
+        raise RuntimeError(f"Failed to clone repository: {e.stderr or e.output or 'unknown error'}")
     
     except Exception as e:
         logger.error(f"Unexpected error during clone: {str(e)}")
