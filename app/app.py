@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from config.config import get_settings
+from utils.community_detector import apply_leiden_communities_from_file
 from utils.enrichment_pipeline import run_enrichment_pipeline
 from utils.graph_extractor import extract_repository_graph
 from utils.repo_cloner import clone_github_repo
@@ -44,12 +45,29 @@ def main(repo_url: str = None, enrich: bool = None):
         print("\n=== Phase 1: Graph Extraction ===")
         graph_json_path = extract_repository_graph(cloned_repo_path, str(graph_file))
         print(f"✓ Graph extracted and saved to: {graph_json_path}")
+
+        # Step 2.5: Apply Leiden community detection to the structural graph
+        print("\n=== Phase 1.5: Leiden Community Detection ===")
+        try:
+            leiden_graph_path = apply_leiden_communities_from_file(graph_json_path)
+            print(f"✓ Leiden communities saved to: {leiden_graph_path}")
+        except ImportError as e:
+            print(f"! Leiden skipped: {e}")
+            leiden_graph_path = graph_json_path
         
         # Step 3 (Optional): Run LLM enrichment pipeline
         if enrich:
             print("\n=== Phase 2: LLM Enrichment ===")
             enriched_path = run_enrichment_pipeline(cloned_repo_path, str(enriched_file))
             print(f"✓ Enriched graph saved to: {enriched_path}")
+
+            # Apply Leiden to the enriched graph too (when available)
+            print("\n=== Phase 2.5: Leiden On Enriched Graph ===")
+            try:
+                enriched_leiden_path = apply_leiden_communities_from_file(enriched_path)
+                print(f"✓ Leiden communities saved to: {enriched_leiden_path}")
+            except ImportError as e:
+                print(f"! Leiden skipped for enriched graph: {e}")
         
     except Exception as e:
         print(f"✗ Error: {e}")

@@ -102,3 +102,24 @@ class DeduplicationGroup(BaseModel):
     )
     similarity_score: float = Field(default=1.0, ge=0.0, le=1.0, description="Average similarity score")
     reason: str = Field(..., description="Why these were deduplicated")
+
+
+class CommunityNode(BaseModel):
+    """A node assigned to a Leiden community."""
+    id: str = Field(..., description="Graph node identifier")
+    community_id: int = Field(..., description="Leiden community identifier")
+
+
+class LeidenCommunity(BaseModel):
+    """A single Leiden community with member node ids."""
+    community_id: int = Field(..., description="Community identifier")
+    size: int = Field(..., description="Number of nodes in the community")
+    members: List[str] = Field(default_factory=list, description="Node ids that belong to this community")
+
+
+class CommunityDetectionResult(BaseModel):
+    """Result payload for Leiden community detection."""
+    nodes: List[dict] = Field(default_factory=list)
+    edges: List[dict] = Field(default_factory=list)
+    communities: List[LeidenCommunity] = Field(default_factory=list)
+    summary: dict = Field(default_factory=dict)
