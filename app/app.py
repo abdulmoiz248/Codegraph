@@ -1,30 +1,23 @@
+import sys
 from pathlib import Path
-
 from config.config import get_settings
 from utils.community_detector import apply_leiden_communities_from_file
 from utils.enrichment_pipeline import run_enrichment_pipeline
 from utils.graph_extractor import extract_repository_graph
 from utils.repo_cloner import clone_github_repo
+from retrieval_cli import run_retrieval_cli
 
 SETTINGS = get_settings()
 REPOS_DIR = Path(SETTINGS.repos_dir)
 OUTPUT_DIR = Path(SETTINGS.output_dir)
 
 
-def main(repo_url: str = None, enrich: bool = None):
+def ingest_pipeline(repo_url: str, enrich: bool):
     """
     Clone a repository and extract its graph structure with optional LLM enrichment.
-    
-    Args:
-        repo_url (str): GitHub repository URL to clone
-        enrich (bool): Whether to run LLM enrichment pipeline (Phase 2)
     """
-    # Create directories if they don't exist
-    repo_url = repo_url or SETTINGS.default_repo_url
-    enrich = SETTINGS.enable_enrichment if enrich is None else enrich
-
     if enrich and not SETTINGS.gemini_api_key:
-        print("! Gemini API key not found in env/.env; skipping enrichment phase.")
+        print("! Gemini API key not found; skipping enrichment phase.")
         enrich = False
 
     REPOS_DIR.mkdir(parents=True, exist_ok=True)
@@ -73,11 +66,30 @@ def main(repo_url: str = None, enrich: bool = None):
         print(f"✗ Error: {e}")
         raise
 
+def main():
+    print("Welcome to GraphRAG")
+    while True:
+        print("\nMain Menu:")
+        print("1. Ingest Repository")
+        print("2. Retrieval CLI (Search)")
+        print("3. Exit")
+        choice = input("Select an option (1-3): ").strip()
+
+        if choice == "1":
+            repo_url = input("Enter GitHub repository URL to clone: ").strip()
+            if not repo_url:
+                print("URL is required.")
+                continue
+            enrich_input = input("Run LLM Enrichment? (y/n): ").strip().lower()
+            enrich = enrich_input == 'y'
+            ingest_pipeline(repo_url, enrich)
+        elif choice == "2":
+            run_retrieval_cli()
+        elif choice == "3":
+            print("Goodbye.")
+            break
+        else:
+            print("Invalid option.")
 
 if __name__ == "__main__":
-    import sys
-    
-    repo_url = sys.argv[1] if len(sys.argv) > 1 else None
-    enrich = sys.argv[2].lower() != "false" if len(sys.argv) > 2 else None
-    
-    main(repo_url, enrich)
+    main()
